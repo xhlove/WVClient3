@@ -1,7 +1,7 @@
 '''
 作者: weimo
 创建日期: 2020-11-05 20:36:28
-上次编辑时间: 2020-11-05 21:23:56
+上次编辑时间: 2020-11-05 21:32:20
 一个人的命运啊,当然要靠自我奋斗,但是...
 '''
 
@@ -32,29 +32,29 @@ def read_pssh(raw: bytes):
 	_start = pssh_offset - 4
 	_end = pssh_offset - 4 + raw[pssh_offset-1]
 	pssh = raw[_start:_end]
-	# _start = _start + 2 + 32
-	# _end = _start + 2 + 32 + 16
-	# kid = binascii.b2a_hex(raw[_start:_end]) # 没有用到
 	return pssh
 
 class WidevineCDM:
-	def __init__(self,url):
+	def __init__(self, license_url: str):
 		self.private_key = binascii.a2b_hex(PRIVATE_KEY)
 		self.pub_key = binascii.a2b_hex(PUBLIC_KEY)
-		self.license_proxy_address=('127.0.0.1', 8888)
-		self.license_request_data=None
-		self.proxies=getproxies()
-		self.license_url=url #'https://widevine-proxy.appspot.com/proxy'
+		self.proxies = getproxies()
+		self.license_url = license_url
 		self.header={"Cookie": ""}
 
-	def generateRequestData(self,pssh_data): # 
-		sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		sock.connect(self.license_proxy_address)
-		sock.send(pssh_data)
-		recvData = sock.recv(10240)
-		self.license_request_data= recvData
-		# print('License request data:\n', binascii.b2a_hex(recvData))
-		return recvData
+	def generateRequestData(self, pssh: bytes):
+		_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		_socket.settimeout(1)
+		try:
+			_socket.connect(("127.0.0.1", 8888))
+			_socket.send(pssh)
+			recv = _socket.recv(10240)
+		except Exception as e:
+			print(f"socket recv data failed. --> {e}")
+			_socket.close()
+			return
+		_socket.close()
+		return recv
 
 	def getContentKey(self,lic_request_data):
 		license=license_protocol_pb2.License()
@@ -91,4 +91,5 @@ pssh = read_pssh(raw)
 
 cdm = WidevineCDM('https://widevine-proxy.appspot.com/proxy')
 data = cdm.generateRequestData(pssh)
-cdm.getContentKey(data)
+if data is not None:
+	cdm.getContentKey(data)
