@@ -1,7 +1,7 @@
 '''
 作者: weimo
 创建日期: 2020-11-05 20:36:28
-上次编辑时间: 2020-11-05 22:50:57
+上次编辑时间: 2020-11-05 23:38:56
 一个人的命运啊,当然要靠自我奋斗,但是...
 '''
 
@@ -67,21 +67,17 @@ class WidevineCDM:
         res = verifier.verify(_hash, signature)
         print(f"verify result is --> {res}")
 
-    def license_request(self, pssh: bytes):
-        license_request_data = self.generateRequestData(pssh)
-        if license_request_data is None:
-            sys.exit("generate requests data failed.")
+    def license_request(self, payload):
         try:
-            r = requests.post(self.license_url, data=license_request_data, headers=self.header, proxies=self.proxies)
+            r = requests.post(self.license_url, data=payload, headers=self.header, proxies=self.proxies)
         except Exception as e:
             sys.exit(f"request license failed. --> {e}")
-        return license_request_data, r.content
+        return r.content
 
     def getContentKey(self, license_request_data: bytes, license_response_data: bytes):
         licenseMessage = license_protocol_pb2.License()
         requestMessage=license_protocol_pb2.SignedMessage()
         responseMessage = license_protocol_pb2.SignedMessage()
-        print(license_response_data)
         requestMessage.ParseFromString(license_request_data)
         responseMessage.ParseFromString(license_response_data)
                 
@@ -97,7 +93,14 @@ class WidevineCDM:
         for key in licenseMessage.key:
             cryptos = AES.new(enc_cmac_key, AES.MODE_CBC, iv=key.iv[0:16])
             dkey = cryptos.decrypt(key.key[0:16])
-            print("KID:", binascii.b2a_hex(key.id),"KEY:",binascii.b2a_hex(dkey))
+            print("KID:", binascii.b2a_hex(key.id), "KEY:",binascii.b2a_hex(dkey))
+
+    def work(self, pssh: bytes):
+        license_request_data = self.generateRequestData(pssh)
+        if license_request_data is None:
+            sys.exit("generate requests data failed.")
+        license_response_data = self.license_request(license_request_data)
+        self.getContentKey(license_request_data, license_response_data)
 
 def main(args):
         if args.init_path is not None:
@@ -115,8 +118,7 @@ def main(args):
             cdm = YKCDM(args.license_url)
         else:
             sys.exit("site is not support.")
-        license_request_data, license_response_data = cdm.license_request(pssh)
-        cdm.getContentKey(license_request_data, license_response_data)
+        cdm.work(pssh)
 
 if __name__ == "__main__":
     command = ArgumentParser(
