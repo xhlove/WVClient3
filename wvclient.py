@@ -1,7 +1,7 @@
 '''
 作者: weimo
 创建日期: 2020-11-05 20:36:28
-上次编辑时间: 2020-11-05 22:17:53
+上次编辑时间: 2020-11-05 22:50:57
 一个人的命运啊,当然要靠自我奋斗,但是...
 '''
 
@@ -67,19 +67,23 @@ class WidevineCDM:
         res = verifier.verify(_hash, signature)
         print(f"verify result is --> {res}")
 
-    def getContentKey(self, lic_request_data: str):
+    def license_request(self, pssh: bytes):
+        license_request_data = self.generateRequestData(pssh)
+        if license_request_data is None:
+            sys.exit("generate requests data failed.")
+        try:
+            r = requests.post(self.license_url, data=license_request_data, headers=self.header, proxies=self.proxies)
+        except Exception as e:
+            sys.exit(f"request license failed. --> {e}")
+        return license_request_data, r.content
+
+    def getContentKey(self, license_request_data: bytes, license_response_data: bytes):
         licenseMessage = license_protocol_pb2.License()
         requestMessage=license_protocol_pb2.SignedMessage()
         responseMessage = license_protocol_pb2.SignedMessage()
-
-        try:
-            r = requests.post(self.license_url, data=lic_request_data, headers=self.header, proxies=self.proxies)
-        except Exception as e:
-            print(f"request license failed. --> {e}")
-            return
-
-        requestMessage.ParseFromString(lic_request_data)
-        responseMessage.ParseFromString(r.content)
+        print(license_response_data)
+        requestMessage.ParseFromString(license_request_data)
+        responseMessage.ParseFromString(license_response_data)
                 
         oaep_key = RSA.importKey(self.private_key)
         cipher = PKCS1_OAEP.new(oaep_key)
@@ -104,17 +108,22 @@ def main(args):
             pssh = base64.b64decode(args.pssh)
         else:
             sys.exit("not possible exit from here")
-        cdm = WidevineCDM(args.license_url)
-        data = cdm.generateRequestData(pssh)
-        if data is None:
-            sys.exit("generate requests data failed.")
-        cdm.getContentKey(data)
+        if args.site == "test":
+            cdm = WidevineCDM(args.license_url)
+        elif args.site == "youku":
+            from youku import YKCDM
+            cdm = YKCDM(args.license_url)
+        else:
+            sys.exit("site is not support.")
+        license_request_data, license_response_data = cdm.license_request(pssh)
+        cdm.getContentKey(license_request_data, license_response_data)
 
 if __name__ == "__main__":
     command = ArgumentParser(
-        prog="wvclient3 v1.0@xhlove",
+        prog="wvclient3 v1.1@xhlove",
         description=("origin author is T3rry7f, this is a python3 version.")
     )
+    command.add_argument("-site", "--site", default="test", help="an option for youku")
     command.add_argument("-path", "--init-path", help="init.mp4 file path")
     command.add_argument("-pssh", "--pssh", help="pssh which is base64 format")
     command.add_argument("-url", "--license-url", default="https://widevine-proxy.appspot.com/proxy", help="widevine license server url")
