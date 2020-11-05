@@ -10,12 +10,12 @@
 
 ![示意图](/binary/Snipaste_2020-11-05_21-10-11.png)
 
-![运行示意图](/binary/Snipaste_2020-11-05_21-15-23.png)
-
 **示例**
 ```bash
 python wvclient.py -path binary/init.mp4
 ```
+
+![运行示意图](/binary/Snipaste_2020-11-05_22-18-29.png)
 
 **帮助**
 ```bash

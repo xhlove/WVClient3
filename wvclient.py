@@ -1,7 +1,7 @@
 '''
 作者: weimo
 创建日期: 2020-11-05 20:36:28
-上次编辑时间: 2020-11-05 22:08:49
+上次编辑时间: 2020-11-05 22:17:53
 一个人的命运啊,当然要靠自我奋斗,但是...
 '''
 
@@ -59,7 +59,8 @@ class WidevineCDM:
         return recv
 
     def verify(self, msg: bytes, signature: bytes):
-                # e.g. self.verify(requestMessage.msg, requestMessage.signature)
+        # 这里的验证似乎不太对 但影响不大
+        # e.g. self.verify(requestMessage.msg, requestMessage.signature)
         _hash = SHA1.new(msg)
         public_key = RSA.importKey(self.public_key)
         verifier = pss.new(public_key)
@@ -85,13 +86,12 @@ class WidevineCDM:
         cmac_key = cipher.decrypt(responseMessage.session_key)
 
         _cipher = CMAC.new(cmac_key, ciphermod=AES)
-        context_enc = b'\x01ENCRYPTION\x00' + requestMessage.msg + bytes([0, 0, 0, 128])
-        encryptKey = _cipher.update(context_enc).digest()
-                
+        _auth_key = b'\x01ENCRYPTION\x00' + requestMessage.msg + b"\x00\x00\x00\x80"
+        enc_cmac_key = _cipher.update(_auth_key).digest()
+        
         licenseMessage.ParseFromString(responseMessage.msg)
-
         for key in licenseMessage.key:
-            cryptos = AES.new(encryptKey, AES.MODE_CBC, iv=key.iv[0:16])
+            cryptos = AES.new(enc_cmac_key, AES.MODE_CBC, iv=key.iv[0:16])
             dkey = cryptos.decrypt(key.key[0:16])
             print("KID:", binascii.b2a_hex(key.id),"KEY:",binascii.b2a_hex(dkey))
 
