@@ -1,7 +1,7 @@
 '''
 作者: weimo
 创建日期: 2020-11-05 20:36:28
-上次编辑时间: 2020-11-05 21:32:20
+上次编辑时间: 2020-11-05 21:44:59
 一个人的命运啊,当然要靠自我奋斗,但是...
 '''
 
@@ -28,62 +28,64 @@ PRIVATE_KEY = "308204a30201000282010100b5d1dc441883596c5d2722832d33cef4e4daa6e99
 PUBLIC_KEY = "30820122300d06092a864886f70d01010105000382010f003082010a0282010100b5d1dc441883596c5d2722832d33cef4e4daa6e9959d6fbd83a9374527e533408448512e7d9509182ef750a7bd7bebbbf3d1d5653d38a41e68af7581d173b168e89b26494b06477b61f9f53a7755ade9cc293135178ffa8e0e6b9b0cafe2a150d6ef0cfd385952b0206fca5398a7dbf6faefd55f00029c15cdc420dece3c7844a72a3054f7d564f1a94f4e33d27ce8284c396e1b140e3568b009a3307ed36c62b3b395d7be57750e6f9155ccf72b3a668445fcae8d5de1e2c1c645b4c2b2a615c0c6a53bb866366b5e9b0b74c41b9fe49ba26bbb75b1cb89ca943c948d6212c07e259568dd4a2f7daf67357d209794c0ab5b4087a339e7fb6da56022ad61ef090203010001"
 
 def read_pssh(raw: bytes):
-	pssh_offset = raw.rfind(b'pssh')
-	_start = pssh_offset - 4
-	_end = pssh_offset - 4 + raw[pssh_offset-1]
-	pssh = raw[_start:_end]
-	return pssh
+    pssh_offset = raw.rfind(b'pssh')
+    _start = pssh_offset - 4
+    _end = pssh_offset - 4 + raw[pssh_offset-1]
+    pssh = raw[_start:_end]
+    return pssh
 
 class WidevineCDM:
-	def __init__(self, license_url: str):
-		self.private_key = binascii.a2b_hex(PRIVATE_KEY)
-		self.pub_key = binascii.a2b_hex(PUBLIC_KEY)
-		self.proxies = getproxies()
-		self.license_url = license_url
-		self.header={"Cookie": ""}
+    def __init__(self, license_url: str):
+        self.private_key = binascii.a2b_hex(PRIVATE_KEY)
+        self.public_key = binascii.a2b_hex(PUBLIC_KEY)
+        self.proxies = getproxies()
+        self.license_url = license_url
+        self.header={"Cookie": ""}
 
-	def generateRequestData(self, pssh: bytes):
-		_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-		_socket.settimeout(1)
-		try:
-			_socket.connect(("127.0.0.1", 8888))
-			_socket.send(pssh)
-			recv = _socket.recv(10240)
-		except Exception as e:
-			print(f"socket recv data failed. --> {e}")
-			_socket.close()
-			return
-		_socket.close()
-		return recv
+    def generateRequestData(self, pssh: bytes):
+        _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        _socket.settimeout(1)
+        try:
+            _socket.connect(("127.0.0.1", 8888))
+            _socket.send(pssh)
+            recv = _socket.recv(10240)
+        except Exception as e:
+            print(f"socket recv data failed. --> {e}")
+            _socket.close()
+            return
+        _socket.close()
+        return recv
 
-	def getContentKey(self,lic_request_data):
-		license=license_protocol_pb2.License()
-		requestMessage=license_protocol_pb2.SignedMessage()
-		responseMessage = license_protocol_pb2.SignedMessage()
+    def verify(self, msg: bytes, signature: bytes):
+        _hash = SHA1.new(msg)
+        public_key = RSA.importKey(self.public_key)
+        verifier = pss.new(public_key)
+        res = verifier.verify(_hash, signature)
+        print(f"verify result is --> {res}")
 
-		resp=requests.post(self.license_url,lic_request_data,headers=self.header,proxies=self.proxies)
-		requestMessage.ParseFromString(lic_request_data)
-		responseMessage.ParseFromString(resp.content)
-		pubkey = RSA.importKey(self.pub_key)
-		verifier = pss.new(pubkey)
-		h = SHA1.new(requestMessage.msg)
-		verifier.verify(h, requestMessage.signature)
-		session_key=responseMessage.session_key
-		license.ParseFromString(responseMessage.msg)
-		rsakey = RSA.importKey(self.private_key)
-		cipher = PKCS1_OAEP.new(rsakey)
-		sessionKey=cipher.decrypt(session_key)
-		context_enc=b'\x01ENCRYPTION\x00' + requestMessage.msg + bytes([0, 0, 0, 128])
-		cobj = CMAC.new(sessionKey, ciphermod=AES)
-		encryptKey=cobj.update(context_enc).digest()
-		k= license.key[1]
-		keyId = binascii.b2a_hex(k.id)
-		keyData = k.key[0:16]
-		keyIv = k.iv[0:16]
-		mode = AES.MODE_CBC
-		cryptos = AES.new(encryptKey, mode, keyIv)
-		dkey = cryptos.decrypt(keyData)
-		print("KID:",keyId,"KEY:",binascii.b2a_hex(dkey))
+    def getContentKey(self, lic_request_data: str):
+        licenseMessage = license_protocol_pb2.License()
+        requestMessage=license_protocol_pb2.SignedMessage()
+        responseMessage = license_protocol_pb2.SignedMessage()
+        try:
+            r = requests.post(self.license_url, data=lic_request_data, headers=self.header, proxies=self.proxies)
+        except Exception as e:
+            print(f"request license failed. --> {e}")
+            return
+        requestMessage.ParseFromString(lic_request_data)
+        responseMessage.ParseFromString(r.content)
+        # self.verify(requestMessage.msg, requestMessage.signature) # no use here
+        private_key = RSA.importKey(self.private_key)
+        cipher = PKCS1_OAEP.new(private_key)
+        sessionKey=cipher.decrypt(responseMessage.session_key)
+        context_enc=b'\x01ENCRYPTION\x00' + requestMessage.msg + bytes([0, 0, 0, 128])
+        cobj = CMAC.new(sessionKey, ciphermod=AES)
+        encryptKey=cobj.update(context_enc).digest()
+        licenseMessage.ParseFromString(responseMessage.msg)
+        for key in licenseMessage.key:
+            cryptos = AES.new(encryptKey, AES.MODE_CBC, iv=key.iv[0:16])
+            dkey = cryptos.decrypt(key.key[0:16])
+            print("KID:", binascii.b2a_hex(key.id),"KEY:",binascii.b2a_hex(dkey))
 
 # put init raw bytes here
 raw = Path(r"binary\init.mp4").read_bytes()
@@ -92,4 +94,4 @@ pssh = read_pssh(raw)
 cdm = WidevineCDM('https://widevine-proxy.appspot.com/proxy')
 data = cdm.generateRequestData(pssh)
 if data is not None:
-	cdm.getContentKey(data)
+    cdm.getContentKey(data)
