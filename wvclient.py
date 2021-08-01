@@ -15,7 +15,7 @@ from urllib.request import getproxies
 from utils import license_protocol_pb2
 
 
-USER_AGNET = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36'
+USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36'
 
 # rewrite from https://github.com/T3rry7f/NoDRM/tree/master/WVClient use python3
 # example init.mp4 https://bitmovin-a.akamaihd.net/content/art-of-motion_drm/video/1080_4800000/cenc_dash/init.mp4
@@ -37,7 +37,7 @@ class PSSH:
     def read_from_init_url(self, url: str):
         pssh = None
         try:
-            r = requests.get(url, headers={'user-agnet': USER_AGNET}, proxies=self.proxies, timeout=5)
+            r = requests.get(url, headers={'user-agnet': USER_AGENT}, proxies=self.proxies, timeout=5)
             pssh = self.read_from_file(r.content)
         except Exception:
             pass
@@ -46,7 +46,7 @@ class PSSH:
     def read_from_mpd_url(self, url: str):
         pssh = None
         try:
-            r = requests.get(url, headers={'user-agnet': USER_AGNET}, proxies=self.proxies, timeout=5)
+            r = requests.get(url, headers={'user-agnet': USER_AGENT}, proxies=self.proxies, timeout=5)
             content = r.content.decode('utf-8')
             results = re.findall(r'pssh.+<', content, re.M | re.I)
             pssh = base64.b64decode(results[0].split('>')[1].split('<')[0])
