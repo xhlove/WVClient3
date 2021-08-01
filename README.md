@@ -6,16 +6,16 @@
 
 # 使用
 
-运行`WideVineProxy.exe`
+**运行 & Run**
 
-执行脚本
+- `WideVineProxy.exe`
 
-**示例**
+**示例 & Usage**
 ```bash
 python wvclient.py -path binary/init.mp4
 ```
 
-**帮助**
+**帮助 & HELP**
 ```bash
 usage: wvclient3 v1.2@xhlove [-h] [-path INIT_PATH] [-pssh PSSH]
                              [-url LICENSE_URL]
@@ -31,5 +31,3 @@ optional arguments:
   -url LICENSE_URL, --license-url LICENSE_URL
                         widevine license server url
 ```
-
-以上。
