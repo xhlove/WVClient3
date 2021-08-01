@@ -15,6 +15,8 @@
 python wvclient.py -path binary/init.mp4
 ```
 
+![](/binary/Snipaste_2021-08-02_01-12-25.png)
+
 **帮助 & HELP**
 ```bash
 usage: wvclient3 v1.2@xhlove [-h] [-path INIT_PATH] [-pssh PSSH]
