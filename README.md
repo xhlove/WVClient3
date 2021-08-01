@@ -1,25 +1,23 @@
 # 说明
 
-原项目是[WVClient](https://github.com/T3rry7f/WVClient)，感谢原作者。
+原项目是[NoDRM](https://github.com/T3rry7f/NoDRM)（WVClient续作，适配2209版本），感谢原作者。
 
 这里改成了python3版本，并附上具体使用方法。
 
 # 使用
 
-首先将`widevinecdm.dll`放到本目录（我用的是1679版本），然后在这里开cmd，并运行`license_proxy.exe`，然后弹窗提示点确定。
+运行`WideVineProxy.exe`
 
-![示意图](/binary/Snipaste_2020-11-05_21-10-11.png)
+执行脚本
 
 **示例**
 ```bash
 python wvclient.py -path binary/init.mp4
 ```
 
-![运行示意图](/binary/Snipaste_2020-11-05_22-18-29.png)
-
 **帮助**
 ```bash
-usage: wvclient3 v1.0@xhlove [-h] [-path INIT_PATH] [-pssh PSSH]
+usage: wvclient3 v1.2@xhlove [-h] [-path INIT_PATH] [-pssh PSSH]
                              [-url LICENSE_URL]
 
 origin author is T3rry7f, this is a python3 version.
