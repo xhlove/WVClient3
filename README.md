@@ -22,6 +22,11 @@ python wvclient.py --mpd-url https://bitmovin-a.akamaihd.net/content/art-of-moti
 python wvclient.py --init-url https://bitmovin-a.akamaihd.net/content/art-of-motion_drm/video/1080_4800000/cenc_dash/init.mp4
 ```
 
+**注意 && Attention**
+
+- 如果使用的不是示例命令，请指定`--license-url`选项
+- if you do not use example command, please specific `--license-url` option
+
 ![](/binary/Snipaste_2021-08-02_01-12-25.png)
 
 **帮助 & HELP**
