@@ -37,7 +37,7 @@ optional arguments:
   --init-path INIT_PATH
                         init.mp4 file path
   --init-url INIT_URL   init.mp4 segment url
-  --mpd-url MPD_URL     widevine license server url
+  --mpd-url MPD_URL     mpd url
   --license-url LICENSE_URL
                         widevine license server url
 ```

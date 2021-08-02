@@ -136,7 +136,7 @@ if __name__ == '__main__':
     command.add_argument('--pssh', help='pssh which is base64 format')
     command.add_argument('--init-path', help='init.mp4 file path')
     command.add_argument('--init-url', help='init.mp4 segment url')
-    command.add_argument('--mpd-url', help='widevine license server url')
+    command.add_argument('--mpd-url', help='mpd url')
     command.add_argument('--license-url', default='https://widevine-proxy.appspot.com/proxy', help='widevine license server url')
     args = command.parse_args()
     main(args)
