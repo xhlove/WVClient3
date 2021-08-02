@@ -6,6 +6,10 @@
 
 # 使用
 
+pip install requests
+pip install protobuf
+pip install pycryptodome
+
 **运行 & Run**
 
 - `WideVineProxy.exe`
