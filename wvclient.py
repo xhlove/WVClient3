@@ -38,7 +38,8 @@ class PSSH:
         pssh = None
         try:
             r = requests.get(url, headers={'user-agnet': USER_AGENT}, proxies=self.proxies, timeout=5)
-            pssh = self.read_from_file(r.content)
+            offset = r.content.rfind(b'pssh')
+            pssh = r.content[offset - 4:offset - 4 + r.content[offset - 1]]
         except Exception:
             pass
         return pssh
@@ -47,8 +48,7 @@ class PSSH:
         pssh = None
         try:
             r = requests.get(url, headers={'user-agnet': USER_AGENT}, proxies=self.proxies, timeout=5)
-            content = r.content.decode('utf-8')
-            results = re.findall(r'pssh.+<', content, re.M | re.I)
+            results = re.findall(r'pssh.+<', r.content.decode('utf-8'), re.M | re.I)
             pssh = base64.b64decode(results[0].split('>')[1].split('<')[0])
         except Exception:
             pass
@@ -65,12 +65,12 @@ class WidevineCDM:
         )
         self.proxies = getproxies()
         self.license_url = license_url
-        self.headers = {"Cookie": ""}
+        self.headers = {'Cookie': ''}
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def generateRequestData(self, pssh: bytes):
         self._socket.settimeout(3)
-        self._socket.connect(("127.0.0.1", 8888))
+        self._socket.connect(('127.0.0.1', 8888))
         self._socket.send(pssh)
         recv = self._socket.recv(10240)
         return recv
@@ -91,7 +91,7 @@ class WidevineCDM:
         self._socket.send(enc_session_key.hex().encode('utf-8'))
         sessionKey = binascii.a2b_hex(self._socket.recv(1024))
         licenseMessage.ParseFromString(responseMessage.msg)
-        context_enc = b'\x01ENCRYPTION\x00' + requestMessage.msg + b"\x00\x00\x00\x80"
+        context_enc = b'\x01ENCRYPTION\x00' + requestMessage.msg + b'\x00\x00\x00\x80'
         cobj = CMAC.new(sessionKey, ciphermod=AES)
         enc_cmac_key = cobj.update(context_enc).digest()
 
@@ -105,34 +105,38 @@ class WidevineCDM:
     def work(self, pssh: bytes):
         license_request_data = self.generateRequestData(pssh)
         if license_request_data is None:
-            sys.exit("generate requests data failed.")
+            sys.exit('generate requests data failed.')
         self.getContentKey(license_request_data)
 
 
 def main(args):
-    if args.init_path is not None:
-        pssh = PSSH().read_from_file(args.init_path)
-    elif args.pssh is not None:
+    if args.pssh:
         if len(args.pssh) % 4 != 0:
-            args.pssh += "=" * (4 - len(args.pssh) % 4)
+            args.pssh += '=' * (4 - len(args.pssh) % 4)
         pssh = base64.b64decode(args.pssh)
+    elif args.init_path:
+        pssh = PSSH().read_from_file(args.init_path)
+    elif args.init_url:
+        pssh = PSSH().read_from_init_url(args.init_url)
+    elif args.mpd_url:
+        pssh = PSSH().read_from_mpd_url(args.mpd_url)
     else:
-        sys.exit("not possible exit from here")
+        sys.exit('at least specific one of them: --pssh, --init-path, --init-url, --mpd-url')
+    if not pssh:
+        sys.exit('can not get pssh')
     cdm = WidevineCDM(args.license_url)
     cdm.work(pssh)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     command = ArgumentParser(
-        prog="wvclient3 v1.2@xhlove",
-        description=("origin author is T3rry7f, this is a python3 version.")
+        prog='wvclient3 v1.2@xhlove',
+        description=('origin author is T3rry7f, this is a python3 version.')
     )
-    command.add_argument("-path", "--init-path", help="init.mp4 file path")
-    command.add_argument("-pssh", "--pssh", help="pssh which is base64 format")
-    command.add_argument("-url", "--license-url", default="https://widevine-proxy.appspot.com/proxy", help="widevine license server url")
+    command.add_argument('--pssh', help='pssh which is base64 format')
+    command.add_argument('--init-path', help='init.mp4 file path')
+    command.add_argument('--init-url', help='init.mp4 segment url')
+    command.add_argument('--mpd-url', help='widevine license server url')
+    command.add_argument('--license-url', default='https://widevine-proxy.appspot.com/proxy', help='widevine license server url')
     args = command.parse_args()
-    if args.init_path is None and args.pssh is None:
-        sys.exit("must specific one of init file path and pssh data")
-    if args.license_url is None:
-        sys.exit("must specific license url")
     main(args)
