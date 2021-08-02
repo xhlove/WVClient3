@@ -48,7 +48,7 @@ class PSSH:
         pssh = None
         try:
             r = requests.get(url, headers={'user-agnet': USER_AGENT}, proxies=self.proxies, timeout=5)
-            results = re.findall(r'pssh.+<', r.content.decode('utf-8'), re.M | re.I)
+            results = re.findall(r'ed.+\n.+(pssh.+)<', r.content.decode('utf-8'), re.M | re.I)
             pssh = base64.b64decode(results[0].split('>')[1].split('<')[0])
         except Exception:
             pass
