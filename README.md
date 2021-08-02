@@ -4,6 +4,10 @@
 
 这里改成了python3版本，并附上具体使用方法。
 
+# ONLY WORK FOR PART WEBSITE
+
+# 仅适用于部分网站
+
 # 使用
 
 ```bash
