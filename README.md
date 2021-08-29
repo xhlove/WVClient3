@@ -4,9 +4,7 @@
 
 这里改成了python3版本，并附上具体使用方法。
 
-# ONLY WORK FOR PART WEBSITE
-
-# 仅适用于部分网站
+**晚些时候更新为cdmapi版本并附上详细的编译过程**
 
 # 使用
 
@@ -14,9 +12,9 @@
 pip install -r requirements.txt
 ```
 
-**运行 & Run**
+**编译 & Compile**
 
-- `WideVineProxy.exe`
+- `cdmapi`
 
 **示例 & Usage**
 ```bash
