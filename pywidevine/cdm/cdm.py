@@ -18,7 +18,6 @@ from Crypto.Hash import CMAC, SHA256, HMAC, SHA1
 from Crypto.PublicKey import RSA
 from Crypto.Signature import pss
 from Crypto.Util import Padding
-from Crypto.Util.number import bytes_to_long, long_to_bytes
 from pywidevine.cdm import cdmapi
 import logging
 
@@ -28,7 +27,7 @@ class Cdm:
         self.logger = logging.getLogger(__name__)
         self.sessions = {}
 
-    def open_session(self, init_data_b64, device, raw_init_data = None, offline=False):
+    def open_session(self, init_data_b64, device, raw_init_data=None, offline=False):
         self.logger.debug("open_session(init_data_b64={}, device={}".format(init_data_b64, device))
         self.logger.info("opening new cdm session")
         if device.session_id_type == 'android':
@@ -132,10 +131,9 @@ class Cdm:
         session.privacy_mode = True
         return 0
 
-
-    def sign_license_request(self,data):
-        em=binascii.b2a_hex((pss._EMSA_PSS_ENCODE(data,2047,Random.get_random_bytes,lambda x, y: pss.MGF1(x, y, data),20)))
-        sig=cdmapi.encrypt(em.decode('utf-8'))
+    def sign_license_request(self, data):
+        em = binascii.b2a_hex((pss._EMSA_PSS_ENCODE(data, 2047, Random.get_random_bytes, lambda x, y: pss.MGF1(x, y, data), 20)))
+        sig = cdmapi.encrypt(em.decode('utf-8'))
         return (binascii.a2b_hex(sig))
 
     def get_license_request(self, session_id):
@@ -154,7 +152,6 @@ class Cdm:
         else:
             license_request = wv_proto2.SignedLicenseRequest()
         client_id = wv_proto2.ClientIdentification()
-        
 
         if not os.path.exists(session.device_config.device_client_id_blob_filename):
             self.logger.error("no client ID blob available for this device")
@@ -176,9 +173,9 @@ class Cdm:
             license_request.Msg.ContentId.CencId.Pssh = session.init_data # bytes
 
         if session.offline:
-           license_type = wv_proto2.LicenseType.Value('OFFLINE')
+            license_type = wv_proto2.LicenseType.Value('OFFLINE')
         else:
-           license_type = wv_proto2.LicenseType.Value('DEFAULT')
+            license_type = wv_proto2.LicenseType.Value('DEFAULT')
         license_request.Msg.ContentId.CencId.LicenseType = license_type
         license_request.Msg.ContentId.CencId.RequestId = session_id
         license_request.Msg.Type = wv_proto2.LicenseRequest.RequestType.Value('NEW')
@@ -230,11 +227,11 @@ class Cdm:
             license_request.Msg.ClientId.CopyFrom(client_id)
 
         if session.device_config.private_key_available:
-             key = RSA.importKey(open(session.device_config.device_private_key_filename).read())
-             session.device_key = key
+            key = RSA.importKey(open(session.device_config.device_private_key_filename).read())
+            session.device_key = key
         else:
-             self.logger.info("need device private key, other methods unimplemented")
-             #return 1
+            self.logger.info("need device private key, other methods unimplemented")
+            # return 1
 
         self.logger.debug("signing license request")
 
@@ -242,7 +239,7 @@ class Cdm:
         if(session.device_key is not None):
             signature = pss.new(key).sign(hash)
         else:
-            signature=self.sign_license_request(hash)
+            signature = self.sign_license_request(hash)
 
         license_request.Signature = signature
 
@@ -291,9 +288,8 @@ class Cdm:
         if(session.device_key is not None):
             session.session_key = oaep_cipher.decrypt(license.SessionKey)
         else:
-            session_key =cdmapi.decrypt(binascii.b2a_hex(license.SessionKey).decode('utf-8'))
-            session.session_key=binascii.a2b_hex(session_key)
-
+            session_key = cdmapi.decrypt(binascii.b2a_hex(license.SessionKey).decode('utf-8'))
+            session.session_key = binascii.a2b_hex(session_key)
 
         lic_req_msg = session.license_request.Msg.SerializeToString()
 

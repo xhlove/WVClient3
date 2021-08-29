@@ -3,7 +3,7 @@ import logging
 from pywidevine.cdm import cdm, deviceconfig
 
 
-class WvDecrypt(object):
+class WvDecrypt:
 
     WV_SYSTEM_ID = [237, 239, 139, 169, 121, 214, 74, 206, 163, 200, 39, 220, 213, 29, 33, 237]
 

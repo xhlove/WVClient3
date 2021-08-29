@@ -24,6 +24,7 @@ devices_available = [device_chromecdm_2209]
 
 FILES_FOLDER = 'devices'
 
+
 class DeviceConfig:
     def __init__(self, device):
         self.device_name = device['name']

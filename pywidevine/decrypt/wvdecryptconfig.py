@@ -1,6 +1,8 @@
 import pywidevine.downloader.wvdownloaderconfig as wvdl_cfg
 
-class WvDecryptConfig(object):
+
+class WvDecryptConfig:
+
     def __init__(self, filename, tracktype, trackno, license, init_data_b64, cert_data_b64=None):
         self.filename = filename
         self.tracktype = tracktype
