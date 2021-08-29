@@ -1,24 +1,23 @@
 import re
 import sys
 import base64
-import socket
-import binascii
 import requests
 from pathlib import Path
-from Crypto.Hash import CMAC
-from Crypto.Hash import SHA1
-from Crypto.Cipher import AES
-from Crypto.PublicKey import RSA
-from Crypto.Signature import pss
 from argparse import ArgumentParser
 from urllib.request import getproxies
-from utils import license_protocol_pb2
-
+from pywidevine.decrypt.wvdecrypt import WvDecrypt
 
 USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/92.0.4515.107 Safari/537.36'
 
-# rewrite from https://github.com/T3rry7f/NoDRM/tree/master/WVClient use python3
-# example init.mp4 https://bitmovin-a.akamaihd.net/content/art-of-motion_drm/video/1080_4800000/cenc_dash/init.mp4
+
+class CmdArgs:
+
+    def __init__(self):
+        self.pssh = None # type: str
+        self.init_path = None # type: str
+        self.init_url = None # type: str
+        self.mpd_url = None # type: str
+        self.license_url = None # type: str
 
 
 class PSSH:
@@ -55,65 +54,66 @@ class PSSH:
         return pssh
 
 
-class WidevineCDM:
-    def __init__(self, license_url: str):
-        self.public_key = binascii.a2b_hex(
-            '30820122300d06092a864886f70d01010105000382010f003082010a0282010100bca83d793f493c49df558612e74c773198ab4901f20369bfaf1598d71e362ef13ab9be3b4d4d73c63'
-            '378542d23beba56ad4d589c1e7f151e25cf6f7a38f8ff1ff491d5d2dfc971617b6d9559406e3a5127b2aebddea965e0dfcf4c50ae241caf9e87bfe33b0db619b5c395e3986e310a3278'
-            'f990b4139a421af74b3e4e1548250dec8f1755b038e61069e2547983ed93878549b4a9f5faa1bef72a75a9929fa7240fb1e46b9587170ef993c29c35f1f145e55bfec0de85d2b9409d6'
-            '599b1c348bf76dd441abd53033475e3267f91647c2584d974d3ad7b8c0c33711556d6c2cf23bf7905b17a68c622a0580a623c1af9f446294d5f2de50721d85eb5f49b70130203010001'
-        )
-        self.proxies = getproxies()
-        self.license_url = license_url
-        self.headers = {'Cookie': ''}
-        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+class Headers:
+    def __init__(self):
+        self.headers = {}
 
-    def generateRequestData(self, pssh: bytes):
-        self._socket.settimeout(3)
-        self._socket.connect(('127.0.0.1', 8888))
-        self._socket.send(pssh)
-        recv = self._socket.recv(10240)
-        return recv
+    def get(self, args: CmdArgs) -> dict:
+        self.__generate(args)
+        return self.headers
 
-    def getContentKey(self, license_request_data: bytes):
-        licenseMessage = license_protocol_pb2.License()
-        requestMessage = license_protocol_pb2.SignedMessage()
-        responseMessage = license_protocol_pb2.SignedMessage()
-        resp = requests.post(self.license_url, license_request_data, headers=self.headers)
-        requestMessage.ParseFromString(license_request_data)
-        responseMessage.ParseFromString(resp.content)
+    def __generate(self, args: CmdArgs):
+        '''
+        - 不指定user-agent 使用默认值
+        - 指定user-agent 使用指定值 如果为"" 那么user-agent就是""
+        '''
+        if args.headers != '':
+            self.__add_headers(args.headers)
 
-        pubkey = RSA.importKey(self.public_key)
-        verifier = pss.new(pubkey)
-        h = SHA1.new(requestMessage.msg)
-        verifier.verify(h, requestMessage.signature)
-        enc_session_key = responseMessage.session_key
-        self._socket.send(enc_session_key.hex().encode('utf-8'))
-        sessionKey = binascii.a2b_hex(self._socket.recv(1024))
-        licenseMessage.ParseFromString(responseMessage.msg)
-        context_enc = b'\x01ENCRYPTION\x00' + requestMessage.msg + b'\x00\x00\x00\x80'
-        cobj = CMAC.new(sessionKey, ciphermod=AES)
-        enc_cmac_key = cobj.update(context_enc).digest()
-
-        for key in licenseMessage.key:
-            if not key.id:
+    def __add_headers(self, text: str):
+        text = text.strip()
+        for one_header in text.split('|'):
+            data = one_header.strip().split(':', maxsplit=1)
+            if len(data) == '':
                 continue
-            cipher = AES.new(enc_cmac_key, AES.MODE_CBC, iv=key.iv[0:16])
-            dkey = cipher.decrypt(key.key[0:16])
-            print(f'KID:KEY {key.id.hex()}:{dkey.hex()}')
-
-    def work(self, pssh: bytes):
-        license_request_data = self.generateRequestData(pssh)
-        if license_request_data is None:
-            sys.exit('generate requests data failed.')
-        self.getContentKey(license_request_data)
+            if len(data) == 1:
+                self.headers[data[0]] = ''
+            else:
+                self.headers[data[0]] = data[1]
 
 
-def main(args):
+def check_pssh(pssh_b64: str):
+    WV_SYSTEM_ID = [237, 239, 139, 169, 121, 214, 74, 206, 163, 200, 39, 220, 213, 29, 33, 237]
+    pssh = base64.b64decode(pssh_b64)
+    if not pssh[12:28] == bytes(WV_SYSTEM_ID):
+        new_pssh = bytearray([0, 0, 0])
+        new_pssh.append(32 + len(pssh))
+        new_pssh[4:] = bytearray(b"pssh")
+        new_pssh[8:] = [0, 0, 0, 0]
+        new_pssh[13:] = WV_SYSTEM_ID
+        new_pssh[29:] = [0, 0, 0, 0]
+        new_pssh[31] = len(pssh)
+        new_pssh[32:] = pssh
+        return base64.b64encode(new_pssh)
+    else:
+        return base64.b64decode(pssh_b64)
+
+
+def command_handler(args: CmdArgs):
+    '''
+    检查命令参数
+    '''
+    if args.license_url is None:
+        assert 1 == 0, 'must set --license-url option'
+    args.headers = Headers().get(args)
+
+
+def main(args: CmdArgs):
     if args.pssh:
         if len(args.pssh) % 4 != 0:
             args.pssh += '=' * (4 - len(args.pssh) % 4)
-        pssh = base64.b64decode(args.pssh)
+        # pssh = base64.b64decode(args.pssh)
+        pssh = check_pssh(args.pssh)
     elif args.init_path:
         pssh = PSSH().read_from_file(args.init_path)
     elif args.init_url:
@@ -124,19 +124,34 @@ def main(args):
         sys.exit('at least specific one of them: --pssh, --init-path, --init-url, --mpd-url')
     if not pssh:
         sys.exit('can not get pssh')
-    cdm = WidevineCDM(args.license_url)
-    cdm.work(pssh)
+
+    pssh = base64.b64encode(pssh).decode('utf-8')
+
+    # headers = {'customdata': 'PEtleU9TQXV0aGVudGljYXRpb25YTUw+PERhdGE+PEdlbmVyYXRpb25UaW1lPjIwMTYtMTEtMTkgMDk6MzQ6MDEuOTkyPC9HZW5lcmF0aW9uVGltZT48RXhwaXJhdGlvblRpbWU+MjAyNi0xMS0xOSAwOTozNDowMS45OTI8L0V4cGlyYXRpb25UaW1lPjxVbmlxdWVJZD4wZmZmMTk3YWQzMzQ0ZTMyOWU0MTA0OTIwMmQ5M2VlYzwvVW5pcXVlSWQ+PFJTQVB1YktleUlkPjdlMTE0MDBjN2RjY2QyOWQwMTc0YzY3NDM5N2Q5OWRkPC9SU0FQdWJLZXlJZD48V2lkZXZpbmVQb2xpY3kgZmxfQ2FuUGxheT0idHJ1ZSIgZmxfQ2FuUGVyc2lzdD0iZmFsc2UiIC8+PFdpZGV2aW5lQ29udGVudEtleVNwZWMgVHJhY2tUeXBlPSJIRCI+PFNlY3VyaXR5TGV2ZWw+MTwvU2VjdXJpdHlMZXZlbD48L1dpZGV2aW5lQ29udGVudEtleVNwZWM+PEZhaXJQbGF5UG9saWN5IC8+PExpY2Vuc2UgdHlwZT0ic2ltcGxlIiAvPjwvRGF0YT48U2lnbmF0dXJlPk1sNnhkcU5xc1VNalNuMDdicU8wME15bHhVZUZpeERXSHB5WjhLWElBYlAwOE9nN3dnRUFvMTlYK1c3MDJOdytRdmEzNFR0eDQydTlDUlJPU1NnREQzZTM4aXE1RHREcW9HelcwS2w2a0JLTWxHejhZZGRZOWhNWmpPTGJkNFVkRnJUbmxxU21raC9CWnNjSFljSmdaUm5DcUZIbGI1Y0p0cDU1QjN4QmtxMUREZUEydnJUNEVVcVJiM3YyV1NueUhGeVZqWDhCR3o0ZWFwZmVFeDlxSitKbWI3dUt3VjNqVXN2Y0Fab1ozSHh4QzU3WTlySzRqdk9Wc1I0QUd6UDlCc3pYSXhKd1ZSZEk3RXRoMjhZNXVEQUVZVi9hZXRxdWZiSXIrNVZOaE9yQ2JIVjhrR2praDhHRE43dC9nYWh6OWhVeUdOaXRqY2NCekJvZHRnaXdSUT09PC9TaWduYXR1cmU+PC9LZXlPU0F1dGhlbnRpY2F0aW9uWE1MPg=='}
+
+    cert = requests.post(args.license_url, b'\x08\x04').content
+    wvdecrypt = WvDecrypt(pssh)
+    wvdecrypt.set_certificate(base64.b64encode(cert))
+    challenge = wvdecrypt.get_challenge()
+    license = requests.post(args.license_url, challenge, headers=args.headers).content
+    wvdecrypt.update_license(base64.b64encode(license))
+    keys = wvdecrypt.start_process()
+
+    for k in keys:
+        print(k)
 
 
 if __name__ == '__main__':
     command = ArgumentParser(
-        prog='wvclient3 v1.2@xhlove',
+        prog='wvclient3 v1.3@xhlove',
         description=('origin author is T3rry7f, this is a python3 version.')
     )
     command.add_argument('--pssh', help='pssh which is base64 format')
     command.add_argument('--init-path', help='init.mp4 file path')
     command.add_argument('--init-url', help='init.mp4 segment url')
     command.add_argument('--mpd-url', help='mpd url')
-    command.add_argument('--license-url', default='https://widevine-proxy.appspot.com/proxy', help='widevine license server url')
+    command.add_argument('--license-url', help='widevine license server url')
+    command.add_argument('--headers', help='set custom headers for request, separators is |, e.g. "header1:value1|header2:value2"')
     args = command.parse_args()
+    command_handler(args)
     main(args)

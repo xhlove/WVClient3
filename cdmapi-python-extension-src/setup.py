@@ -7,6 +7,6 @@ setup(
         "cdmapi",
         ["bind.cpp", "codelift.cpp"],
         include_dirs=['cryptopp850', 'wasm_src'],
-        extra_objects=['cryptlib.lib']
+        extra_objects=['cryptlib_MD.lib']
     )]
 )

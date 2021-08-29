@@ -16,14 +16,30 @@ WVClient3 is modified from it, with more detail guide.
 
 # Usage
 
-You can skip the next step if you are using python 3.7.4, 3.7.10 or 3.8.5
+You can skip the next step if you are using python 3.7.4/3.7.10/3.8.5 with Windows System
 
 ## Compile cdmapi python binding library
+
+**NOTE, must install Visual Studio first, its need cl.exe and link.exe to build library**
 
 ```bash
 cd cdmapi-python-extension-src
 python setup.py build_ext --inplace
 ```
+
+After compiling successfully, move `cdmapi.cp38-win_amd64.pyd` to `pywidevine/cdm` and rename it to `cdmapi.pyd`
+
+If you are not using Windows System, you should compile cryptopp library first
+
+-  https://github.com/weidai11/cryptopp
+
+Then move output static library to `cdmapi-python-extension-src` and modify `setup.py` **extra_objects**
+
+If you are using python 3.7.10 and above, should compile `cryptopp` with `/MD` flag, which means multi thread dll
+
+3.7.4 should compile `cryptopp` with `/MT` flag, which means multi thread
+
+I havent tested others version, guess that all versions below 3.7.4 should use `/MT` flag, 3.7.4 - 3.7.10? Test is youself please.
 
 ## Install requirements.txt
 
@@ -40,18 +56,16 @@ python wvclient.py --mpd-url https://bitmovin-a.akamaihd.net/content/art-of-moti
 python wvclient.py --init-url https://bitmovin-a.akamaihd.net/content/art-of-motion_drm/video/1080_4800000/cenc_dash/init.mp4
 ```
 
-**注意 && Attention**
+## Attention
 
-- 如果使用的不是示例命令，请指定`--license-url`选项
 - if you do not use example command, please specific `--license-url` option
 
-![](/binary/Snipaste_2021-08-02_01-12-25.png)
+![](images/Snipaste_2021-08-29_18-40-47.png)
 
-**帮助 & HELP**
+## HELP INFO
+
 ```bash
-usage: wvclient3 v1.2@xhlove [-h] [--pssh PSSH] [--init-path INIT_PATH]
-                             [--init-url INIT_URL] [--mpd-url MPD_URL]
-                             [--license-url LICENSE_URL]
+usage: wvclient3 v1.3@xhlove [-h] [--pssh PSSH] [--init-path INIT_PATH] [--init-url INIT_URL] [--mpd-url MPD_URL] [--license-url LICENSE_URL] [--headers HEADERS]
 
 origin author is T3rry7f, this is a python3 version.
 
@@ -64,4 +78,5 @@ optional arguments:
   --mpd-url MPD_URL     mpd url
   --license-url LICENSE_URL
                         widevine license server url
+  --headers HEADERS     set custom headers for request, separators is |, e.g. "header1:value1|header2:value2"
 ```
