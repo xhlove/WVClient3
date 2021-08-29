@@ -1,4 +1,16 @@
-# 说明
+```bash
+__        ____     ______ _ _            _   _____ 
+\ \      / /\ \   / / ___| (_) ___ _ __ | |_|___ / 
+ \ \ /\ / /  \ \ / / |   | | |/ _ \ '_ \| __| |_ \ 
+  \ V  V /    \ V /| |___| | |  __/ | | | |_ ___) |
+   \_/\_/      \_/  \____|_|_|\___|_| |_|\__|____/ 
+```
+
+---
+
+[ENGLISH README](README_ENG.md)
+
+# WVClient3
 
 原项目是[NoDRM](https://github.com/T3rry7f/NoDRM)（WVClient续作，适配2209版本），感谢原作者。
 
@@ -12,9 +24,16 @@
 pip install -r requirements.txt
 ```
 
-**编译 & Compile**
+### 编译cdmapi & Compile cdmapi
 
-- `cdmapi`
+- 进入`cdmapi-python-extension-src`文件夹
+    ```bash
+    cd cdmapi-python-extension-src
+    ```
+- 执行编译命令
+    ```bash
+    python setup.py build_ext --inplace
+    ```
 
 **示例 & Usage**
 ```bash
