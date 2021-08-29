@@ -62,8 +62,6 @@ python wvclient.py --license-url "https://wv-keyos.licensekeyserver.com" --pssh 
 ```bash
 usage: wvclient3 v1.3@xhlove [-h] [--pssh PSSH] [--init-path INIT_PATH] [--init-url INIT_URL] [--mpd-url MPD_URL] [--license-url LICENSE_URL] [--headers HEADERS]
 
-origin author is T3rry7f, this is a python3 version.
-
 optional arguments:
   -h, --help            show this help message and exit
   --pssh PSSH           pssh which is base64 format

@@ -141,8 +141,7 @@ def main(args: CmdArgs):
 
 if __name__ == '__main__':
     command = ArgumentParser(
-        prog='wvclient3 v1.3@xhlove',
-        description=('origin author is T3rry7f, this is a python3 version.')
+        prog='wvclient3 v1.3@xhlove'
     )
     command.add_argument('--pssh', help='pssh which is base64 format')
     command.add_argument('--init-path', help='init.mp4 file path')
